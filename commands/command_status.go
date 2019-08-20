@@ -32,7 +32,7 @@ func statusCommand(cmd *cobra.Command, args []string) {
 		scanIndexAt = git.RefBeforeFirstCommit
 	}
 
-	scanner, err := lfs.NewPointerScanner()
+	scanner, err := lfs.NewPointerScanner(cfg.OSEnv())
 	if err != nil {
 		ExitWithError(err)
 	}
@@ -228,7 +228,7 @@ func statusScanRefRange(ref *git.Ref) {
 		return
 	}
 
-	gitscanner := lfs.NewGitScanner(func(p *lfs.WrappedPointer, err error) {
+	gitscanner := lfs.NewGitScanner(cfg, func(p *lfs.WrappedPointer, err error) {
 		if err != nil {
 			Panic(err, "Could not scan for Git LFS objects")
 			return
@@ -239,7 +239,7 @@ func statusScanRefRange(ref *git.Ref) {
 	defer gitscanner.Close()
 
 	Print("Git LFS objects to be pushed to %s:\n", remoteRef.Name)
-	if err := gitscanner.ScanRefRange(ref.Sha, "^"+remoteRef.Sha, nil); err != nil {
+	if err := gitscanner.ScanRefRange(ref.Sha, remoteRef.Sha, nil); err != nil {
 		Panic(err, "Could not scan for Git LFS objects")
 	}
 

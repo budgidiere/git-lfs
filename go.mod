@@ -2,12 +2,11 @@ module github.com/git-lfs/git-lfs
 
 require (
 	github.com/alexbrainman/sspi v0.0.0-20180125232955-4729b3d4d858
-	github.com/git-lfs/gitobj v1.1.0
+	github.com/git-lfs/gitobj v1.4.0
 	github.com/git-lfs/go-netrc v0.0.0-20180525200031-e0e9ca483a18
 	github.com/git-lfs/go-ntlm v0.0.0-20190307203151-c5056e7fa066
 	github.com/git-lfs/wildmatch v1.0.2
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/kr/pty v0.0.0-20150511174710-5cf931ef8f76
 	github.com/mattn/go-isatty v0.0.4
 	github.com/olekukonko/ts v0.0.0-20171002115256-78ecb04241c0
 	github.com/pkg/errors v0.0.0-20170505043639-c605e284fe17
@@ -19,5 +18,5 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v0.0.0-20170210233622-6b67b3fab74d
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
-	golang.org/x/sys v0.0.0-20180831094639-fa5fdf94c789 // indirect
+	golang.org/x/sys v0.0.0-20180831094639-fa5fdf94c789
 )

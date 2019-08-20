@@ -14,7 +14,7 @@ assert_pointer() {
     while read -r -d $'\0' x; do
       echo $x
     done |
-    grep "$path" | cut -f 3 -d " ")
+    grep -F "$path" | cut -f 3 -d " ")
 
   actual=$(git cat-file -p $gitblob)
   expected=$(pointer $oid $size)
@@ -119,6 +119,7 @@ refute_server_object() {
     -o http.json \
     -d "{\"operation\":\"download\",\"objects\":[{\"oid\":\"$oid\"}]}" \
     -H "Accept: application/vnd.git-lfs+json" \
+    -H "Content-Type: application/vnd.git-lfs+json" \
     -H "X-Check-Object: 1" \
     -H "X-Ignore-Retries: true" 2>&1 |
     tee http.log
@@ -157,6 +158,7 @@ assert_server_object() {
     -o http.json \
     -d "{\"operation\":\"download\",\"objects\":[{\"oid\":\"$oid\"}],\"ref\":{\"name\":\"$refspec\"}}" \
     -H "Accept: application/vnd.git-lfs+json" \
+    -H "Content-Type: application/vnd.git-lfs+json" \
     -H "X-Check-Object: 1" \
     -H "X-Ignore-Retries: true" 2>&1 |
     tee http.log

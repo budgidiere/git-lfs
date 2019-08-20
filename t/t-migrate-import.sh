@@ -439,6 +439,34 @@ EOF)
 )
 end_test
 
+begin_test "migrate import (identical contents, different permissions)"
+(
+  set -e
+
+  # Windows lacks POSIX permissions.
+  [ "$IS_WINDOWS" -eq 1 ] && exit 0
+
+  setup_multiple_local_branches
+  git checkout master
+
+  echo "foo" >foo.dat
+  git add .
+  git commit -m "add file"
+
+  chmod u+x foo.dat
+  git add .
+  git commit -m "make file executable"
+
+  # Verify we have executable permissions.
+  ls -la foo.dat | grep 'rwx'
+
+  git lfs migrate import --everything --include="*.dat"
+
+  # Verify we have executable permissions.
+  ls -la foo.dat | grep 'rwx'
+)
+end_test
+
 begin_test "migrate import (bare repository)"
 (
   set -e
@@ -570,6 +598,37 @@ begin_test "migrate import (--everything and --include with glob pattern)"
 
   assert_pointer "refs/heads/master" "a.md" "$md_master_oid" "140"
   assert_pointer "refs/heads/my-feature" "a.md" "$md_feature_oid" "30"
+
+  assert_local_object "$md_master_oid" "140"
+  assert_local_object "$md_feature_oid" "30"
+  refute_local_object "$txt_master_oid"
+  refute_local_object "$txt_feature_oid"
+)
+end_test
+
+begin_test "migrate import (--everything with tag pointing to tag)"
+(
+  set -e
+
+  setup_multiple_local_branches
+
+  md_master_oid="$(calc_oid "$(git cat-file -p "refs/heads/master:a.md")")"
+  txt_master_oid="$(calc_oid "$(git cat-file -p "refs/heads/master:a.txt")")"
+  md_feature_oid="$(calc_oid "$(git cat-file -p "refs/heads/my-feature:a.md")")"
+  txt_feature_oid="$(calc_oid "$(git cat-file -p "refs/heads/my-feature:a.txt")")"
+
+  git tag -a -m abc abc refs/heads/master
+  git tag -a -m def def refs/tags/abc
+
+  git lfs migrate import --verbose --everything --include='*.[mM][dD]'
+
+  assert_pointer "refs/heads/master" "a.md" "$md_master_oid" "140"
+  assert_pointer "refs/tags/abc" "a.md" "$md_master_oid" "140"
+  assert_pointer "refs/tags/def" "a.md" "$md_master_oid" "140"
+  assert_pointer "refs/heads/my-feature" "a.md" "$md_feature_oid" "30"
+
+  git tag --points-at refs/tags/abc | grep -q def
+  ! git tag --points-at refs/tags/def | grep -q abc
 
   assert_local_object "$md_master_oid" "140"
   assert_local_object "$md_feature_oid" "30"

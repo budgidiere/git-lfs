@@ -28,7 +28,12 @@ func (f *GitFilter) SmudgeToFile(filename string, ptr *Pointer, download bool, m
 		defer os.Chmod(filename, stat.Mode())
 	}
 
-	file, err := os.Create(filename)
+	abs, err := filepath.Abs(filename)
+	if err != nil {
+		return fmt.Errorf("Could not produce absolute path for %q", filename)
+	}
+
+	file, err := os.Create(abs)
 	if err != nil {
 		return fmt.Errorf("Could not create working directory file: %v", err)
 	}
@@ -36,7 +41,7 @@ func (f *GitFilter) SmudgeToFile(filename string, ptr *Pointer, download bool, m
 	if _, err := f.Smudge(file, ptr, filename, download, manifest, cb); err != nil {
 		if errors.IsDownloadDeclinedError(err) {
 			// write placeholder data instead
-			file.Seek(0, os.SEEK_SET)
+			file.Seek(0, io.SeekStart)
 			ptr.Encode(file)
 			return err
 		} else {
@@ -96,7 +101,7 @@ func (f *GitFilter) downloadFile(writer io.Writer, ptr *Pointer, workingfile, me
 		tq.WithProgressCallback(cb),
 		tq.RemoteRef(f.RemoteRef()),
 	)
-	q.Add(filepath.Base(workingfile), mediafile, ptr.Oid, ptr.Size)
+	q.Add(filepath.Base(workingfile), mediafile, ptr.Oid, ptr.Size, false)
 	q.Wait()
 
 	if errs := q.Errors(); len(errs) > 0 {

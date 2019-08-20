@@ -439,7 +439,7 @@ func ValidateRemoteURL(remote string) error {
 	}
 
 	switch u.Scheme {
-	case "ssh", "http", "https", "git":
+	case "ssh", "http", "https", "git", "file":
 		return nil
 	default:
 		return fmt.Errorf("Invalid remote url protocol %q in %q", u.Scheme, remote)
@@ -644,6 +644,9 @@ func RootDir() (string, error) {
 
 	path := strings.TrimSpace(string(out))
 	path, err = tools.TranslateCygwinPath(path)
+	if err != nil {
+		return "", err
+	}
 	return canonicalizeDir(path)
 }
 
@@ -654,6 +657,10 @@ func GitDir() (string, error) {
 		return "", fmt.Errorf("Failed to call git rev-parse --git-dir: %v %v", err, string(out))
 	}
 	path := strings.TrimSpace(string(out))
+	path, err = tools.TranslateCygwinPath(path)
+	if err != nil {
+		return "", err
+	}
 	return canonicalizeDir(path)
 }
 
@@ -671,6 +678,10 @@ func GitCommonDir() (string, error) {
 		return "", fmt.Errorf("Failed to call git rev-parse --git-dir: %v %v", err, string(out))
 	}
 	path := strings.TrimSpace(string(out))
+	path, err = tools.TranslateCygwinPath(path)
+	if err != nil {
+		return "", err
+	}
 	return canonicalizeDir(path)
 }
 

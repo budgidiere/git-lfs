@@ -59,7 +59,7 @@ func delayedSmudge(gf *lfs.GitFilter, s *git.FilterProcessScanner, to io.Writer,
 
 	if !skip && filter.Allows(filename) {
 		if _, statErr := os.Stat(path); statErr != nil {
-			q.Add(filename, path, ptr.Oid, ptr.Size)
+			q.Add(filename, path, ptr.Oid, ptr.Size, false)
 			return 0, true, ptr, nil
 		}
 
@@ -124,7 +124,7 @@ func smudge(gf *lfs.GitFilter, to io.Writer, from io.Reader, filename string, sk
 		download = filter.Allows(filename)
 	}
 
-	n, err := gf.Smudge(to, ptr, filename, download, getTransferManifest(), cb)
+	n, err := gf.Smudge(to, ptr, filename, download, getTransferManifestOperationRemote("download", cfg.Remote()), cb)
 	if file != nil {
 		file.Close()
 	}

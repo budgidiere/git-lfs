@@ -36,7 +36,16 @@ type ObjectDatabase struct {
 //
 //  /absolute/repo/path/.git/objects
 func FromFilesystem(root, tmp string) (*ObjectDatabase, error) {
-	b, err := NewFilesystemBackend(root, tmp)
+	return FromFilesystemWithAlternates(root, tmp, "")
+}
+
+// FromFilesystemWithAlternates constructs an *ObjectDatabase instance that is
+// backed by a directory on the filesystem, optionally with one or more
+// alternates. Specifically, this should point to:
+//
+//  /absolute/repo/path/.git/objects
+func FromFilesystemWithAlternates(root, tmp, alternates string) (*ObjectDatabase, error) {
+	b, err := NewFilesystemBackendWithAlternates(root, tmp, alternates)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +167,7 @@ func (o *ObjectDatabase) WriteBlob(b *Blob) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer os.Remove(buf.Name())
+	defer o.cleanup(buf)
 
 	sha, _, err := o.encodeBuffer(b, buf)
 	if err != nil {
@@ -236,7 +245,7 @@ func (d *ObjectDatabase) encodeBuffer(object Object, buf io.ReadWriter) (sha []b
 	if err != nil {
 		return nil, 0, err
 	}
-	defer os.Remove(tmp.Name())
+	defer d.cleanup(tmp)
 
 	to := NewObjectWriter(tmp)
 	if _, err = to.WriteHeader(object.Type(), int64(cn)); err != nil {
@@ -322,4 +331,9 @@ func (o *ObjectDatabase) decode(r *ObjectReader, into Object) error {
 		return nil
 	}
 	return r.Close()
+}
+
+func (o *ObjectDatabase) cleanup(f *os.File) {
+	f.Close()
+	os.Remove(f.Name())
 }

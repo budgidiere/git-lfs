@@ -212,9 +212,12 @@ begin_test "track with autocrlf=input"
   [ "*.mov filter=lfs -text" = "$(cat .gitattributes)" ]
 
   git lfs track "*.gif"
-  expected="*.mov filter=lfs -text^M$
-*.gif filter=lfs diff=lfs merge=lfs -text^M$"
-  [ "$expected" = "$(cat -e .gitattributes)" ]
+  if [ $IS_WINDOWS -eq 1 ]
+  then
+      cat -e .gitattributes | grep '\^M\$'
+  else
+      cat -e .gitattributes | grep -v '\^M'
+  fi
 )
 end_test
 
@@ -648,5 +651,33 @@ begin_test "track: escaped pattern in .gitattributes"
     echo >&2 "changing flag for an existing tracked file shouldn't add another line"
     exit 1
   fi
+)
+end_test
+
+begin_test "track: escaped glob pattern in .gitattributes"
+(
+  set -e
+
+  # None of these characters are valid in the Win32 subsystem.
+  [ "$IS_WINDOWS" -eq 1 ] && exit 0
+
+  reponame="track-escaped-glob"
+  git init "$reponame"
+  cd "$reponame"
+
+  filename='*[foo]bar?.txt'
+  contents='I need escaping'
+  contents_oid=$(calc_oid "$contents")
+
+  git lfs track --filename "$filename"
+  git add .
+  cat .gitattributes
+
+  printf "%s" "$contents" > "$filename"
+  git add .
+  git commit -m 'Add unusually named file'
+
+  # If Git understood our escaping, we'll have a pointer. Otherwise, we won't.
+  assert_pointer "master" "$filename" "$contents_oid" 15
 )
 end_test

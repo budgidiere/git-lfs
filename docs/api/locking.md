@@ -61,8 +61,9 @@ Successful responses return the created lock:
 as long as it's returned as a string.
 * `path` - String path name of the locked file. This should be relative to the
 root of the repository working directory.
-* `locked_at` - The timestamp the lock was created, as an ISO 8601 formatted string.
-* `owner` - The name of the user that created the Lock. This should be set from
+* `locked_at` - The timestamp the lock was created, as an uppercase
+RFC 3339-formatted string with second precision.
+* `owner` - Optional name of the user that created the Lock. This should be set from
 the user credentials posted when creating the lock.
 
 ```js
@@ -71,10 +72,10 @@ the user credentials posted when creating the lock.
 {
   "lock": {
     "id": "some-uuid",
-    "path": "/path/to/file",
+    "path": "foo/bar.zip",
     "locked_at": "2016-05-17T15:49:06+00:00",
     "owner": {
-      "name": "Jane Doe",
+      "name": "Jane Doe"
     }
   }
 }
@@ -193,7 +194,7 @@ Note: If the server has no locks, it must return an empty `locks` array.
       }
     }
   ],
-  "next_cursor": "optional next ID",
+  "next_cursor": "optional next ID"
 }
 ```
 
@@ -310,7 +311,7 @@ Note: If the server has no locks, it must return an empty array in the `ours` or
     }
   ],
   "theirs": [],
-  "next_cursor": "optional next ID",
+  "next_cursor": "optional next ID"
 }
 ```
 
