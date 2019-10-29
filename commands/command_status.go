@@ -12,6 +12,7 @@ import (
 
 	"github.com/git-lfs/git-lfs/git"
 	"github.com/git-lfs/git-lfs/lfs"
+	"github.com/git-lfs/git-lfs/tools"
 	"github.com/spf13/cobra"
 )
 
@@ -54,6 +55,8 @@ func statusCommand(cmd *cobra.Command, args []string) {
 
 	wd, _ := os.Getwd()
 	repo := cfg.LocalWorkingDir()
+
+	wd = tools.ResolveSymlinks(wd)
 
 	Print("\nGit LFS objects to be committed:\n")
 	for _, entry := range staged {
@@ -152,6 +155,11 @@ func blobInfo(s *lfs.PointerScanner, blobSha, name string) (sha, from string, er
 		return "", "", err
 	}
 	defer f.Close()
+
+	// We've replaced a file with a directory.
+	if fi, err := f.Stat(); err == nil && fi.Mode().IsDir() {
+		return "deleted", "File", nil
+	}
 
 	shasum := sha256.New()
 	if _, err = io.Copy(shasum, f); err != nil {

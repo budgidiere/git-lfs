@@ -3,7 +3,6 @@ package lfs
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -67,7 +66,7 @@ func (f *GitFilter) CopyCallbackFile(event, filename string, index, totalFiles i
 
 func wrapProgressError(err error, event, filename string) error {
 	if err != nil {
-		return fmt.Errorf("Error writing Git LFS %s progress to %s: %s", event, filename, err.Error())
+		return fmt.Errorf("error writing Git LFS %s progress to %s: %s", event, filename, err.Error())
 	}
 
 	return nil
@@ -177,7 +176,7 @@ func (p *currentToRepoPathConverter) Convert(filename string) string {
 func pathConverterArgs(cfg *config.Configuration) (string, string, bool, error) {
 	currDir, err := os.Getwd()
 	if err != nil {
-		return "", "", false, fmt.Errorf("Unable to get working dir: %v", err)
+		return "", "", false, fmt.Errorf("unable to get working dir: %v", err)
 	}
 	currDir = tools.ResolveSymlinks(currDir)
 	return cfg.LocalWorkingDir(), currDir, cfg.LocalWorkingDir() == currDir, nil
@@ -233,17 +232,5 @@ func LinkOrCopy(cfg *config.Configuration, src string, dst string) error {
 // This function is designed to handle only temporary files that will be renamed
 // into place later somewhere within the Git repository.
 func TempFile(cfg *config.Configuration, pattern string) (*os.File, error) {
-	tmp, err := ioutil.TempFile(cfg.TempDir(), pattern)
-	if err != nil {
-		return nil, err
-	}
-
-	perms := cfg.RepositoryPermissions(false)
-	err = os.Chmod(tmp.Name(), perms)
-	if err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return nil, err
-	}
-	return tmp, nil
+	return tools.TempFile(cfg.TempDir(), pattern, cfg)
 }

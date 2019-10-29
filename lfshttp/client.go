@@ -21,6 +21,7 @@ import (
 	"github.com/git-lfs/git-lfs/errors"
 	"github.com/git-lfs/git-lfs/tools"
 	"github.com/rubyist/tracerx"
+	"golang.org/x/net/http2"
 )
 
 const MediaType = "application/vnd.git-lfs+json; charset=utf-8"
@@ -435,11 +436,22 @@ func (c *Client) HttpClient(host string) *http.Client {
 		tr.TLSClientConfig.RootCAs = getRootCAsForHost(c, host)
 	}
 
+	http2.ConfigureTransport(tr)
+
 	httpClient := &http.Client{
 		Transport: tr,
 		CheckRedirect: func(*http.Request, []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
+	}
+
+	if isCookieJarEnabledForHost(c, host) {
+		tracerx.Printf("http: cookieFile for %s", host)
+		if cookieJar, err := getCookieJarForHost(c, host); err == nil {
+			httpClient.Jar = cookieJar
+		} else {
+			tracerx.Printf("http: error while reading cookieFile: %s", err.Error())
+		}
 	}
 
 	c.hostClients[host] = httpClient

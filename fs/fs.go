@@ -45,7 +45,7 @@ type Filesystem struct {
 
 func (f *Filesystem) EachObject(fn func(Object) error) error {
 	var eachErr error
-	tools.FastWalkGitRepo(f.LFSObjectDir(), func(parentDir string, info os.FileInfo, err error) {
+	tools.FastWalkDir(f.LFSObjectDir(), func(parentDir string, info os.FileInfo, err error) {
 		if err != nil {
 			eachErr = err
 			return
@@ -67,7 +67,7 @@ func (f *Filesystem) ObjectExists(oid string, size int64) bool {
 func (f *Filesystem) ObjectPath(oid string) (string, error) {
 	dir := f.localObjectDir(oid)
 	if err := tools.MkdirAll(dir, f); err != nil {
-		return "", fmt.Errorf("Error trying to create local storage directory in %q: %s", dir, err)
+		return "", fmt.Errorf("error trying to create local storage directory in %q: %s", dir, err)
 	}
 	return filepath.Join(dir, oid), nil
 }

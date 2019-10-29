@@ -38,7 +38,7 @@ begin_test "fsck default"
 
   echo "CORRUPTION" >> .git/lfs/objects/$aOid12/$aOid34/$aOid
 
-  moved=$(native_path "$TRASHDIR/$reponame/.git/lfs/bad")
+  moved=$(canonical_path "$TRASHDIR/$reponame/.git/lfs/bad")
   expected="$(printf 'Object a.dat (%s) is corrupt
 Moving corrupt objects to %s' "$aOid" "$moved")"
   [ "$expected" = "$(git lfs fsck)" ]
@@ -95,6 +95,30 @@ begin_test "fsck dry run"
     echo "oid for b.dat does not match"
     exit 1
   fi
+)
+end_test
+
+begin_test "fsck does not fail with shell characters in paths"
+(
+  set -e
+
+  mkdir '[[path]]'
+  cd '[[path]]'
+  reponame="fsck-shell-paths"
+  git init $reponame
+  cd $reponame
+
+  # Create a commit with some files tracked by git-lfs
+  git lfs track *.dat
+  echo "test data" > a.dat
+  echo "test data 2" > b.dat
+  git add .gitattributes *.dat
+  git commit -m "first commit"
+
+  # Verify that the pack code handles glob patterns properly.
+  git gc --aggressive --prune=now
+
+  [ "Git LFS fsck OK" = "$(git lfs fsck)" ]
 )
 end_test
 
