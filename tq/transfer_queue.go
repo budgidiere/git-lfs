@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/git-lfs/git-lfs/creds"
 	"github.com/git-lfs/git-lfs/errors"
 	"github.com/git-lfs/git-lfs/git"
-	"github.com/git-lfs/git-lfs/lfsapi"
 	"github.com/git-lfs/git-lfs/lfshttp"
 	"github.com/git-lfs/git-lfs/tools"
 	"github.com/rubyist/tracerx"
@@ -442,7 +442,7 @@ func (q *TransferQueue) collectBatches() {
 		// don't process further batches.  Abort the wait queue so that
 		// we don't deadlock waiting for objects to complete when they
 		// never will.
-		if err != nil {
+		if err != nil && !errors.IsRetriableError(err) {
 			q.wait.Abort()
 			break
 		}
@@ -538,7 +538,7 @@ func (q *TransferQueue) enqueueAndCollectRetriesFor(batch batch) (batch, error) 
 				}
 			}
 
-			return next, err
+			return next, errors.NewRetriableError(err)
 		}
 	}
 
@@ -882,7 +882,7 @@ func (q *TransferQueue) toAdapterCfg(e lfshttp.Endpoint) AdapterConfig {
 	apiClient := q.manifest.APIClient()
 	concurrency := q.manifest.ConcurrentTransfers()
 	access := apiClient.Endpoints.AccessFor(e.Url)
-	if access.Mode() == lfsapi.NTLMAccess {
+	if access.Mode() == creds.NTLMAccess {
 		concurrency = 1
 	}
 

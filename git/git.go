@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -178,7 +179,14 @@ func CatFile() (*subprocess.BufferedCmd, error) {
 	return gitNoLFSBuffered("cat-file", "--batch-check")
 }
 
-func DiffIndex(ref string, cached bool) (*bufio.Scanner, error) {
+func DiffIndex(ref string, cached bool, refresh bool) (*bufio.Scanner, error) {
+	if refresh {
+		_, err := gitSimple("update-index", "-q", "--refresh")
+		if err != nil {
+			return nil, lfserrors.Wrap(err, "Failed to run git update-index")
+		}
+	}
+
 	args := []string{"diff-index", "-M"}
 	if cached {
 		args = append(args, "--cached")
@@ -347,7 +355,7 @@ func RemoteList() ([]string, error) {
 // Refs returns all of the local and remote branches and tags for the current
 // repository. Other refs (HEAD, refs/stash, git notes) are ignored.
 func LocalRefs() ([]*Ref, error) {
-	cmd := gitNoLFS("show-ref", "--heads", "--tags")
+	cmd := gitNoLFS("show-ref")
 
 	outp, err := cmd.StdoutPipe()
 	if err != nil {
@@ -597,6 +605,13 @@ func GitAndRootDirs() (string, string, error) {
 	out, err := cmd.Output()
 	output := string(out)
 	if err != nil {
+		// If we got a fatal error, it's possible we're on a newer
+		// (2.24+) Git and we're not in a worktree, so fall back to just
+		// looking up the repo directory.
+		if e, ok := err.(*exec.ExitError); ok && e.ProcessState.ExitCode() == 128 {
+			absGitDir, err := GitDir()
+			return absGitDir, "", err
+		}
 		return "", "", fmt.Errorf("failed to call git rev-parse --git-dir --show-toplevel: %q", buf.String())
 	}
 
@@ -604,7 +619,12 @@ func GitAndRootDirs() (string, string, error) {
 	pathLen := len(paths)
 
 	for i := 0; i < pathLen; i++ {
-		paths[i], err = tools.TranslateCygwinPath(paths[i])
+		if paths[i] != "" {
+			paths[i], err = tools.TranslateCygwinPath(paths[i])
+			if err != nil {
+				return "", "", fmt.Errorf("error translating cygwin path: %s", err)
+			}
+		}
 	}
 
 	if pathLen == 0 {
@@ -652,9 +672,12 @@ func RootDir() (string, error) {
 
 func GitDir() (string, error) {
 	cmd := gitNoLFS("rev-parse", "--git-dir")
+	buf := &bytes.Buffer{}
+	cmd.Stderr = buf
 	out, err := cmd.Output()
+
 	if err != nil {
-		return "", fmt.Errorf("failed to call git rev-parse --git-dir: %v %v", err, string(out))
+		return "", fmt.Errorf("failed to call git rev-parse --git-dir: %v %v: %v", err, string(out), buf.String())
 	}
 	path := strings.TrimSpace(string(out))
 	path, err = tools.TranslateCygwinPath(path)
@@ -674,8 +697,10 @@ func GitCommonDir() (string, error) {
 
 	cmd := gitNoLFS("rev-parse", "--git-common-dir")
 	out, err := cmd.Output()
+	buf := &bytes.Buffer{}
+	cmd.Stderr = buf
 	if err != nil {
-		return "", fmt.Errorf("failed to call git rev-parse --git-dir: %v %v", err, string(out))
+		return "", fmt.Errorf("failed to call git rev-parse --git-common-dir: %v %v: %v", err, string(out), buf.String())
 	}
 	path := strings.TrimSpace(string(out))
 	path, err = tools.TranslateCygwinPath(path)
