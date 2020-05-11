@@ -3,9 +3,10 @@ package lfshttp
 import (
 	"fmt"
 	"net/url"
-	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/git-lfs/git-lfs/git"
 )
 
 const UrlUnknown = "<unknown>"
@@ -108,18 +109,7 @@ func EndpointFromHttpUrl(u *url.URL) Endpoint {
 }
 
 func EndpointFromLocalPath(path string) Endpoint {
-	if !strings.HasSuffix(path, ".git") {
-		path = fmt.Sprintf("%s/.git", path)
-	}
-	var slash string
-	if abs, err := filepath.Abs(path); err == nil {
-		// Required for Windows paths to work.
-		if !strings.HasPrefix(abs, "/") {
-			slash = "/"
-		}
-		path = abs
-	}
-	return Endpoint{Url: fmt.Sprintf("file://%s%s", slash, filepath.ToSlash(path))}
+	return Endpoint{Url: git.RewriteLocalPathAsURL(path)}
 }
 
 // Construct a new endpoint from a file URL

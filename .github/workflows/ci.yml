@@ -11,7 +11,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - run: script/cibuild
-    - run: make release
+    - run: CGO_ENABLED=0 make release
     - run: mkdir -p bin/assets
     - run: find bin/releases -name "*$(uname -s | tr A-Z a-z)*" | xargs -I{} cp {} bin/assets
     - uses: actions/upload-artifact@v1
@@ -49,9 +49,13 @@ jobs:
       shell: bash
     - run: GOPATH="$HOME/go" PATH="$HOME/go/bin:$PATH" script/cibuild
       shell: bash
+    - run: rm -f commands/mancontent_gen.go
+      shell: bash
     - run: GOPATH="$HOME/go" PATH="$HOME/go/bin:$PATH" make GOARCH=386 -B
       shell: bash
     - run: mv bin\git-lfs.exe git-lfs-x86.exe
+    - run: rm -f commands/mancontent_gen.go
+      shell: bash
     - run: GOPATH="$HOME/go" PATH="$HOME/go/bin:$PATH" make GOARCH=amd64 -B
       shell: bash
     - run: mv bin\git-lfs.exe git-lfs-x64.exe
@@ -94,4 +98,4 @@ jobs:
     - uses: actions/setup-ruby@v1
     - run: git clone https://github.com/git-lfs/build-dockers.git "$HOME/build-dockers"
     - run: (cd "$HOME/build-dockers" && ./build_dockers.bsh)
-    - run: DOCKER_AUTOPULL=0 ./docker/run_dockers.bsh
+    - run: DOCKER_AUTOPULL=0 ./docker/run_dockers.bsh --prune

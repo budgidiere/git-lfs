@@ -31,6 +31,7 @@ const (
 	RefTypeLocalBranch  = RefType(iota)
 	RefTypeRemoteBranch = RefType(iota)
 	RefTypeLocalTag     = RefType(iota)
+	RefTypeRemoteTag    = RefType(iota)
 	RefTypeHEAD         = RefType(iota) // current checkout
 	RefTypeOther        = RefType(iota) // stash or unknown
 
@@ -352,6 +353,54 @@ func RemoteList() ([]string, error) {
 	return ret, nil
 }
 
+func RemoteURLs(push bool) (map[string][]string, error) {
+	cmd := gitNoLFS("remote", "-v")
+
+	outp, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to call git remote -v: %v", err)
+	}
+	cmd.Start()
+	defer cmd.Wait()
+
+	scanner := bufio.NewScanner(outp)
+
+	text := "(fetch)"
+	if push {
+		text = "(push)"
+	}
+	ret := make(map[string][]string)
+	for scanner.Scan() {
+		// [remote, urlpair-text]
+		pair := strings.Split(strings.TrimSpace(scanner.Text()), "\t")
+		if len(pair) != 2 {
+			continue
+		}
+		// [url, "(fetch)" | "(push)"]
+		urlpair := strings.Split(pair[1], " ")
+		if len(urlpair) != 2 || urlpair[1] != text {
+			continue
+		}
+		ret[pair[0]] = append(ret[pair[0]], urlpair[0])
+	}
+
+	return ret, nil
+}
+
+func MapRemoteURL(url string, push bool) (string, bool) {
+	urls, err := RemoteURLs(push)
+	if err != nil {
+		return url, false
+	}
+
+	for name, remotes := range urls {
+		if len(remotes) == 1 && url == remotes[0] {
+			return name, true
+		}
+	}
+	return url, false
+}
+
 // Refs returns all of the local and remote branches and tags for the current
 // repository. Other refs (HEAD, refs/stash, git notes) are ignored.
 func LocalRefs() ([]*Ref, error) {
@@ -452,6 +501,34 @@ func ValidateRemoteURL(remote string) error {
 	default:
 		return fmt.Errorf("invalid remote url protocol %q in %q", u.Scheme, remote)
 	}
+}
+
+func RewriteLocalPathAsURL(path string) string {
+	var slash string
+	if abs, err := filepath.Abs(path); err == nil {
+		// Required for Windows paths to work.
+		if !strings.HasPrefix(abs, "/") {
+			slash = "/"
+		}
+		path = abs
+	}
+
+	var gitpath string
+	if filepath.Base(path) == ".git" {
+		gitpath = path
+		path = filepath.Dir(path)
+	} else {
+		gitpath = filepath.Join(path, ".git")
+	}
+
+	if _, err := os.Stat(gitpath); err == nil {
+		path = gitpath
+	} else if _, err := os.Stat(path); err != nil {
+		// Not a local path.  We check down here because we perform
+		// canonicalization by stripping off the .git above.
+		return path
+	}
+	return fmt.Sprintf("file://%s%s", slash, filepath.ToSlash(path))
 }
 
 func UpdateIndexFromStdin() *subprocess.Cmd {
@@ -1042,7 +1119,7 @@ func Fetch(remotes ...string) error {
 }
 
 // RemoteRefs returns a list of branches & tags for a remote by actually
-// accessing the remote vir git ls-remote
+// accessing the remote via git ls-remote.
 func RemoteRefs(remoteName string) ([]*Ref, error) {
 	var ret []*Ref
 	cmd := gitNoLFS("ls-remote", "--heads", "--tags", "-q", remoteName)
@@ -1064,7 +1141,11 @@ func RemoteRefs(remoteName string) ([]*Ref, error) {
 			}
 
 			sha := match[1]
-			ret = append(ret, &Ref{name, RefTypeRemoteBranch, sha})
+			typ := RefTypeRemoteBranch
+			if match[2] == "tags" {
+				typ = RefTypeRemoteTag
+			}
+			ret = append(ret, &Ref{name, typ, sha})
 		}
 	}
 	return ret, cmd.Wait()

@@ -404,9 +404,9 @@ test-race : GO_TEST_EXTRA_ARGS=-race
 # 		make PKGS="config lfsapi tools/kv" test-race
 #
 # And so on.
-test : fmt
+test : fmt $(.DEFAULT_GOAL)
 	(unset GIT_DIR; unset GIT_WORK_TREE; \
-	$(GO) test $(GO_TEST_EXTRA_ARGS) $(addprefix ./,$(PKGS)))
+	$(GO) test -count=1 $(GO_TEST_EXTRA_ARGS) $(addprefix ./,$(PKGS)))
 
 # integration is a shorthand for running 'make' in the 't' directory.
 .PHONY : integration
@@ -469,6 +469,7 @@ MAN_ROFF_TARGETS = man/git-lfs-checkout.1 \
   man/git-lfs-migrate.1 \
   man/git-lfs-pointer.1 \
   man/git-lfs-post-checkout.1 \
+  man/git-lfs-post-commit.1 \
   man/git-lfs-post-merge.1 \
   man/git-lfs-pre-push.1 \
   man/git-lfs-prune.1 \
@@ -501,6 +502,7 @@ MAN_HTML_TARGETS = man/git-lfs-checkout.1.html \
   man/git-lfs-migrate.1.html \
   man/git-lfs-pointer.1.html \
   man/git-lfs-post-checkout.1.html \
+  man/git-lfs-post-commit.1.html \
   man/git-lfs-post-merge.1.html \
   man/git-lfs-pre-push.1.html \
   man/git-lfs-prune.1.html \
