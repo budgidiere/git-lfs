@@ -9,7 +9,7 @@ import (
 	"github.com/git-lfs/git-lfs/git"
 	"github.com/git-lfs/git-lfs/tasklog"
 	"github.com/git-lfs/git-lfs/tools"
-	"github.com/git-lfs/gitobj"
+	"github.com/git-lfs/gitobj/v2"
 )
 
 // refUpdater is a type responsible for moving references from one point in the
@@ -79,10 +79,11 @@ func (r *refUpdater) updateOneRef(list *tasklog.ListTask, maxNameLen int, seen m
 		return errors.Wrapf(err, "could not decode: %q", ref.Sha)
 	}
 
-	if _, ok := seen[ref.Name]; ok {
+	refspec := ref.Refspec()
+	if _, ok := seen[refspec]; ok {
 		return nil
 	}
-	seen[ref.Name] = struct{}{}
+	seen[refspec] = struct{}{}
 
 	to, ok := r.CacheFn(sha1)
 

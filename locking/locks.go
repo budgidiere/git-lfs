@@ -138,9 +138,11 @@ func (c *Client) LockFile(path string) (Lock, error) {
 
 	abs := filepath.Join(c.gitRoot, path)
 
-	// Ensure writeable on return
-	if err := tools.SetFileWriteFlag(abs, true); err != nil {
-		return Lock{}, err
+	// If the file exists, ensure that it's writeable on return
+	if tools.FileExists(abs) {
+		if err := tools.SetFileWriteFlag(abs, true); err != nil {
+			return Lock{}, errors.Wrap(err, "set file write flag")
+		}
 	}
 
 	return lock, nil
