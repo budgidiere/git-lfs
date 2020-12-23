@@ -98,6 +98,8 @@ Simply type ` + root.Name() + ` help [path to command] for full details.`,
 	})
 	root.PersistentFlags().StringVarP(&workingDirectory, "", "C", "", "")
 
+	canonicalizeEnvironment()
+
 	cfg = config.New()
 
 	for _, f := range commandFuncs {
