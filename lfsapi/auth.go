@@ -283,7 +283,6 @@ func setRequestAuthFromURL(req *http.Request, u *url.URL) bool {
 	}
 
 	if pass, ok := u.User.Password(); ok {
-		fmt.Fprintln(os.Stderr, "warning: current Git remote contains credentials")
 		setRequestAuth(req, u.User.Username(), pass)
 		return true
 	}
